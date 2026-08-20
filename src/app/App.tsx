@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./components/ui/button";
 import { QuoteHeader } from "./components/quote-header";
 import { ClientInfo } from "./components/client-info";
@@ -6,90 +6,147 @@ import { ServiceItems, ServiceItem } from "./components/service-items";
 import { QuoteSummary } from "./components/quote-summary";
 import { QuoteTerms } from "./components/quote-terms";
 import { CurrencySelector } from "./components/currency-selector";
-import { Edit, Printer, Eye } from "lucide-react";
+import { QuoteList } from "./components/quote-list";
+import { CompanyProfileDialog } from "./components/company-profile-dialog";
+import { Edit, Printer, Eye, ArrowLeft } from "lucide-react";
+import {
+  CompanyProfile,
+  SavedQuote,
+  createEmptyQuote,
+  deleteQuote,
+  getNextQuoteNumber,
+  hasProfile,
+  loadProfile,
+  loadQuotes,
+  saveProfile,
+  saveQuote
+} from "./lib/storage";
 
 export default function App() {
+  const [view, setView] = useState<"list" | "editor">("list");
+  const [quotes, setQuotes] = useState<SavedQuote[]>(() => loadQuotes());
+  const [quoteId, setQuoteId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(true);
 
-  // Company Info
   const [companyInfo, setCompanyInfo] = useState({
-    name: "Desarrollo Web Profesional",
-    address: "Calle Ejemplo 123\n28001 Madrid, España",
-    phone: "+34 600 000 000",
-    email: "contacto@tuempresa.com",
-    website: "www.tuempresa.com"
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    website: ""
   });
 
-  // Client Info
+  const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>(undefined);
+
   const [clientInfo, setClientInfo] = useState({
-    name: "Juan Pérez",
-    company: "Cliente Ejemplo S.L.",
-    email: "cliente@ejemplo.com",
-    phone: "+34 600 111 222",
-    address: "Calle Cliente 456\n28002 Madrid, España"
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    address: ""
   });
 
-  // Quote Details
-  const [quoteNumber, setQuoteNumber] = useState("PRE-2024-001");
+  const [quoteNumber, setQuoteNumber] = useState("");
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [validUntil, setValidUntil] = useState(
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
 
-  // Service Items
-  const [items, setItems] = useState<ServiceItem[]>([
-    {
-      id: '1',
-      description: 'Diseño y desarrollo de sitio web WordPress personalizado\nIncluye diseño responsive y optimización SEO',
-      quantity: 1,
-      price: 500000
-    },
-    {
-      id: '2',
-      description: 'Instalación y configuración de plugins premium\n(WooCommerce, Yoast SEO, Elementor Pro)',
-      quantity: 1,
-      price: 100000
-    },
-    {
-      id: '3',
-      description: 'Migración de contenido desde sitio web anterior',
-      quantity: 1,
-      price: 65000
-    },
-    {
-      id: '4',
-      description: 'Capacitación para gestión del sitio web\n(2 sesiones de 2 horas)',
-      quantity: 4,
-      price: 25000
-    }
-  ]);
+  const [items, setItems] = useState<ServiceItem[]>([]);
 
-  // Tax and Totals
   const [taxRate, setTaxRate] = useState(21);
-
-  // Currency
   const [currency, setCurrency] = useState("ARS");
 
-  // Terms and Notes
-  const [terms, setTerms] = useState(
-    `- El presupuesto es válido por 30 días desde la fecha de emisión.
-- Se requiere un pago del 50% para iniciar el proyecto.
-- El 50% restante se abonará al finalizar el proyecto.
-- El plazo de entrega estimado es de 4-6 semanas desde el inicio del proyecto.
-- Incluye 3 rondas de revisiones.
-- No incluye registro de dominio ni hosting (se puede contratar por separado).
-- Los cambios significativos fuera del alcance inicial podrían generar costes adicionales.`
-  );
-  const [notes, setNotes] = useState(
-    `Este presupuesto incluye todos los servicios especificados para el desarrollo de un sitio web WordPress profesional y funcional. Estoy disponible para resolver cualquier duda o ajustar el presupuesto según tus necesidades específicas.`
-  );
+  const [terms, setTerms] = useState("");
+  const [notes, setNotes] = useState("");
 
-  // Calculations
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!hasProfile()) setProfileDialogOpen(true);
+  }, []);
+
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
-  // Handlers
+  useEffect(() => {
+    if (view !== "editor" || !quoteId) return;
+
+    const quote: SavedQuote = {
+      id: quoteId,
+      companyInfo,
+      clientInfo,
+      logoDataUrl,
+      quoteNumber,
+      quoteDate,
+      validUntil,
+      items,
+      taxRate,
+      currency,
+      terms,
+      notes,
+      updatedAt: Date.now()
+    };
+
+    saveQuote(quote);
+    setQuotes(loadQuotes());
+  }, [
+    view,
+    quoteId,
+    companyInfo,
+    clientInfo,
+    logoDataUrl,
+    quoteNumber,
+    quoteDate,
+    validUntil,
+    items,
+    taxRate,
+    currency,
+    terms,
+    notes
+  ]);
+
+  const loadQuoteIntoEditor = (quote: SavedQuote) => {
+    setQuoteId(quote.id);
+    setCompanyInfo(quote.companyInfo);
+    setLogoDataUrl(quote.logoDataUrl);
+    setClientInfo(quote.clientInfo);
+    setQuoteNumber(quote.quoteNumber);
+    setQuoteDate(quote.quoteDate);
+    setValidUntil(quote.validUntil);
+    setItems(quote.items);
+    setTaxRate(quote.taxRate);
+    setCurrency(quote.currency);
+    setTerms(quote.terms);
+    setNotes(quote.notes);
+    setIsEditing(true);
+    setView("editor");
+  };
+
+  const handleOpenQuote = (id: string) => {
+    const quote = quotes.find((q) => q.id === id);
+    if (quote) loadQuoteIntoEditor(quote);
+  };
+
+  const handleNewQuote = () => {
+    const nextNumber = getNextQuoteNumber(quotes);
+    const quote = createEmptyQuote(nextNumber);
+    saveQuote(quote);
+    setQuotes(loadQuotes());
+    loadQuoteIntoEditor(quote);
+  };
+
+  const handleDeleteQuote = (id: string) => {
+    deleteQuote(id);
+    setQuotes(loadQuotes());
+  };
+
+  const handleBackToList = () => {
+    setQuotes(loadQuotes());
+    setView("list");
+  };
+
   const handleCompanyInfoChange = (field: string, value: string) => {
     setCompanyInfo(prev => ({ ...prev, [field]: value }));
   };
@@ -99,7 +156,7 @@ export default function App() {
   };
 
   const handleItemChange = (id: string, field: keyof ServiceItem, value: string | number) => {
-    setItems(items.map(item => 
+    setItems(items.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ));
   };
@@ -122,12 +179,48 @@ export default function App() {
     window.print();
   };
 
+  const handleEditProfile = () => {
+    setProfileDialogOpen(true);
+  };
+
+  const handleSaveProfile = (profile: CompanyProfile) => {
+    saveProfile(profile);
+    setProfileDialogOpen(false);
+  };
+
+  if (view === "list") {
+    return (
+      <>
+        <QuoteList
+          quotes={quotes}
+          onOpenQuote={handleOpenQuote}
+          onNewQuote={handleNewQuote}
+          onDeleteQuote={handleDeleteQuote}
+          onEditProfile={handleEditProfile}
+        />
+        <CompanyProfileDialog
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+          initialValues={loadProfile()}
+          onSave={handleSaveProfile}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <>
+      <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Action Buttons */}
         <div className="mb-6 flex justify-between items-center print:hidden">
-          <CurrencySelector currency={currency} onCurrencyChange={setCurrency} />
+          <div className="flex items-center gap-3">
+            <Button onClick={handleBackToList} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
+            <CurrencySelector currency={currency} onCurrencyChange={setCurrency} />
+          </div>
           <div className="flex gap-3">
             <Button
               onClick={() => setIsEditing(!isEditing)}
@@ -149,7 +242,10 @@ export default function App() {
         <div className="bg-white shadow-lg rounded-lg p-8 print:shadow-none">
           <QuoteHeader
             companyInfo={companyInfo}
+            logoDataUrl={logoDataUrl}
             onCompanyInfoChange={handleCompanyInfoChange}
+            onLogoChange={setLogoDataUrl}
+            onLogoRemove={() => setLogoDataUrl(undefined)}
             isEditing={isEditing}
           />
 
@@ -212,6 +308,13 @@ export default function App() {
           }
         }
       `}</style>
-    </div>
+      </div>
+      <CompanyProfileDialog
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+        initialValues={loadProfile()}
+        onSave={handleSaveProfile}
+      />
+    </>
   );
 }
