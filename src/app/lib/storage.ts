@@ -22,7 +22,11 @@ export interface ClientInfo {
   email: string;
   phone: string;
   address: string;
+  cuit: string;
+  taxCondition: string;
 }
+
+export type QuoteStatus = "borrador" | "enviado" | "aceptado" | "rechazado" | "vencido";
 
 export interface SavedQuote {
   id: string;
@@ -33,10 +37,12 @@ export interface SavedQuote {
   quoteDate: string;
   validUntil: string;
   items: ServiceItem[];
+  /** Default tax rate (%) pre-filled onto newly-added items. Not used for the quote total anymore — see per-item taxRate. */
   taxRate: number;
   currency: string;
   terms: string;
   notes: string;
+  status: QuoteStatus;
   updatedAt: number;
 }
 
@@ -129,6 +135,19 @@ export function getNextQuoteNumber(quotes: SavedQuote[]): string {
   return `PRE-${currentYear}-${String(max + 1).padStart(3, "0")}`;
 }
 
+export function duplicateQuote(quote: SavedQuote, newQuoteNumber: string): SavedQuote {
+  const duplicated: SavedQuote = {
+    ...quote,
+    id: Date.now().toString(),
+    quoteNumber: newQuoteNumber,
+    status: "borrador",
+    updatedAt: Date.now()
+  };
+
+  saveQuote(duplicated);
+  return duplicated;
+}
+
 export function createEmptyQuote(quoteNumber: string): SavedQuote {
   const today = new Date().toISOString().split("T")[0];
   const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -149,7 +168,9 @@ export function createEmptyQuote(quoteNumber: string): SavedQuote {
       company: "",
       email: "",
       phone: "",
-      address: ""
+      address: "",
+      cuit: "",
+      taxCondition: ""
     },
     logoDataUrl: undefined,
     quoteNumber,
@@ -160,6 +181,7 @@ export function createEmptyQuote(quoteNumber: string): SavedQuote {
     currency: "ARS",
     terms: DEFAULT_TERMS,
     notes: DEFAULT_NOTES,
+    status: "borrador",
     updatedAt: Date.now()
   };
 }

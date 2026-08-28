@@ -43,8 +43,8 @@ export function QuoteHeader({
 
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold">Información de tu Empresa</h3>
+      <div className="space-y-4 p-6 bg-muted rounded-lg">
+        <h3 className="font-bold tracking-tight">Información de tu Empresa</h3>
         <div>
           <Label htmlFor="companyLogo">Logo</Label>
           <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export function QuoteHeader({
                   variant="ghost"
                   size="sm"
                   onClick={onLogoRemove}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-destructive hover:text-destructive"
                 >
                   <X className="w-4 h-4 mr-1" />
                   Quitar logo
@@ -70,7 +70,7 @@ export function QuoteHeader({
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="companyName">Nombre de la Empresa</Label>
             <Input
@@ -108,7 +108,7 @@ export function QuoteHeader({
               placeholder="www.tuempresa.com"
             />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <Label htmlFor="companyAddress">Dirección</Label>
             <Textarea
               id="companyAddress"
@@ -134,10 +134,10 @@ export function QuoteHeader({
               className="max-h-16 mb-2 object-contain"
             />
           )}
-          <h1 className="text-3xl font-bold text-blue-600 mb-2">{companyInfo.name}</h1>
-          <p className="text-sm text-gray-600 whitespace-pre-line">{companyInfo.address}</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">{companyInfo.name}</h1>
+          <p className="text-sm text-muted-foreground whitespace-pre-line">{companyInfo.address}</p>
         </div>
-        <div className="text-right text-sm text-gray-600">
+        <div className="text-right text-sm text-muted-foreground">
           <p>{companyInfo.phone}</p>
           <p>{companyInfo.email}</p>
           <p>{companyInfo.website}</p>

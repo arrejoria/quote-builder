@@ -12,7 +12,7 @@ interface QuoteTermsProps {
 export function QuoteTerms({ terms, notes, onTermsChange, onNotesChange, isEditing }: QuoteTermsProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-gray-50 rounded-lg">
+      <div className="space-y-4 p-6 bg-muted rounded-lg">
         <div>
           <Label htmlFor="terms">Términos y Condiciones</Label>
           <Textarea
@@ -42,13 +42,13 @@ export function QuoteTerms({ terms, notes, onTermsChange, onNotesChange, isEditi
       {terms && (
         <div>
           <h3 className="font-semibold mb-2">Términos y Condiciones:</h3>
-          <p className="text-gray-700 whitespace-pre-line">{terms}</p>
+          <p className="text-muted-foreground whitespace-pre-line">{terms}</p>
         </div>
       )}
       {notes && (
         <div>
           <h3 className="font-semibold mb-2">Notas:</h3>
-          <p className="text-gray-700 whitespace-pre-line">{notes}</p>
+          <p className="text-muted-foreground whitespace-pre-line">{notes}</p>
         </div>
       )}
     </div>

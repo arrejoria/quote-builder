@@ -1,6 +1,14 @@
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+
+const TAX_CONDITIONS = [
+  "Responsable Inscripto",
+  "Monotributista",
+  "Consumidor Final",
+  "Exento"
+];
 
 interface ClientInfoProps {
   clientInfo: {
@@ -9,33 +17,19 @@ interface ClientInfoProps {
     email: string;
     phone: string;
     address: string;
+    cuit: string;
+    taxCondition: string;
   };
-  quoteNumber: string;
-  quoteDate: string;
-  validUntil: string;
   onClientInfoChange: (field: string, value: string) => void;
-  onQuoteNumberChange: (value: string) => void;
-  onQuoteDateChange: (value: string) => void;
-  onValidUntilChange: (value: string) => void;
   isEditing: boolean;
 }
 
-export function ClientInfo({
-  clientInfo,
-  quoteNumber,
-  quoteDate,
-  validUntil,
-  onClientInfoChange,
-  onQuoteNumberChange,
-  onQuoteDateChange,
-  onValidUntilChange,
-  isEditing
-}: ClientInfoProps) {
+export function ClientInfo({ clientInfo, onClientInfoChange, isEditing }: ClientInfoProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold">Información del Cliente</h3>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-4 p-6 bg-muted rounded-lg">
+        <h3 className="font-bold tracking-tight">Cliente</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="clientName">Nombre del Cliente</Label>
             <Input
@@ -73,7 +67,32 @@ export function ClientInfo({
               placeholder="+34 600 000 000"
             />
           </div>
-          <div className="col-span-2">
+          <div>
+            <Label htmlFor="clientCuit">CUIT/CUIL</Label>
+            <Input
+              id="clientCuit"
+              value={clientInfo.cuit}
+              onChange={(e) => onClientInfoChange('cuit', e.target.value)}
+              placeholder="20-12345678-9"
+            />
+          </div>
+          <div>
+            <Label htmlFor="clientTaxCondition">Condición frente al IVA</Label>
+            <Select
+              value={clientInfo.taxCondition}
+              onValueChange={(value) => onClientInfoChange('taxCondition', value)}
+            >
+              <SelectTrigger id="clientTaxCondition">
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {TAX_CONDITIONS.map((condition) => (
+                  <SelectItem key={condition} value={condition}>{condition}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
             <Label htmlFor="clientAddress">Dirección</Label>
             <Textarea
               id="clientAddress"
@@ -83,57 +102,22 @@ export function ClientInfo({
               rows={2}
             />
           </div>
-          <div>
-            <Label htmlFor="quoteNumber">Nº Presupuesto</Label>
-            <Input
-              id="quoteNumber"
-              value={quoteNumber}
-              onChange={(e) => onQuoteNumberChange(e.target.value)}
-              placeholder="PRE-2024-001"
-            />
-          </div>
-          <div>
-            <Label htmlFor="quoteDate">Fecha</Label>
-            <Input
-              id="quoteDate"
-              type="date"
-              value={quoteDate}
-              onChange={(e) => onQuoteDateChange(e.target.value)}
-            />
-          </div>
-          <div className="col-span-2">
-            <Label htmlFor="validUntil">Válido hasta</Label>
-            <Input
-              id="validUntil"
-              type="date"
-              value={validUntil}
-              onChange={(e) => onValidUntilChange(e.target.value)}
-            />
-          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-8 mb-8">
-      <div>
-        <h3 className="font-semibold text-lg mb-2">Cliente:</h3>
-        <div className="text-sm text-gray-700">
-          <p className="font-medium">{clientInfo.name}</p>
-          {clientInfo.company && <p>{clientInfo.company}</p>}
-          <p>{clientInfo.email}</p>
-          <p>{clientInfo.phone}</p>
-          {clientInfo.address && <p className="mt-1 whitespace-pre-line">{clientInfo.address}</p>}
-        </div>
-      </div>
-      <div className="text-right">
-        <h3 className="font-semibold text-lg mb-2">Detalles del Presupuesto:</h3>
-        <div className="text-sm text-gray-700">
-          <p><span className="font-medium">Nº:</span> {quoteNumber}</p>
-          <p><span className="font-medium">Fecha:</span> {new Date(quoteDate).toLocaleDateString('es-ES')}</p>
-          <p><span className="font-medium">Válido hasta:</span> {new Date(validUntil).toLocaleDateString('es-ES')}</p>
-        </div>
+    <div>
+      <h3 className="font-semibold text-lg mb-2">Cliente:</h3>
+      <div className="text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">{clientInfo.name}</p>
+        {clientInfo.company && <p>{clientInfo.company}</p>}
+        <p>{clientInfo.email}</p>
+        <p>{clientInfo.phone}</p>
+        {clientInfo.cuit && <p>CUIT/CUIL: {clientInfo.cuit}</p>}
+        {clientInfo.taxCondition && <p>{clientInfo.taxCondition}</p>}
+        {clientInfo.address && <p className="mt-1 whitespace-pre-line">{clientInfo.address}</p>}
       </div>
     </div>
   );

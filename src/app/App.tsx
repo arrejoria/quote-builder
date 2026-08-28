@@ -1,19 +1,25 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import { Button } from "./components/ui/button";
+import { WelcomeScreen } from "./components/welcome-screen";
 import { QuoteHeader } from "./components/quote-header";
 import { ClientInfo } from "./components/client-info";
+import { QuoteDetails } from "./components/quote-details";
 import { ServiceItems, ServiceItem } from "./components/service-items";
 import { QuoteSummary } from "./components/quote-summary";
 import { QuoteTerms } from "./components/quote-terms";
-import { CurrencySelector } from "./components/currency-selector";
 import { QuoteList } from "./components/quote-list";
 import { CompanyProfileDialog } from "./components/company-profile-dialog";
+import { TemplatePickerDialog } from "./components/template-picker-dialog";
 import { Edit, Printer, Eye, ArrowLeft } from "lucide-react";
 import {
   CompanyProfile,
+  QuoteStatus,
   SavedQuote,
   createEmptyQuote,
   deleteQuote,
+  duplicateQuote,
   getNextQuoteNumber,
   hasProfile,
   loadProfile,
@@ -21,6 +27,7 @@ import {
   saveProfile,
   saveQuote
 } from "./lib/storage";
+import { QuoteTemplate } from "./lib/templates";
 
 export default function App() {
   const [view, setView] = useState<"list" | "editor">("list");
@@ -43,7 +50,9 @@ export default function App() {
     company: "",
     email: "",
     phone: "",
-    address: ""
+    address: "",
+    cuit: "",
+    taxCondition: ""
   });
 
   const [quoteNumber, setQuoteNumber] = useState("");
@@ -56,18 +65,24 @@ export default function App() {
 
   const [taxRate, setTaxRate] = useState(21);
   const [currency, setCurrency] = useState("ARS");
+  const [status, setStatus] = useState<QuoteStatus>("borrador");
 
   const [terms, setTerms] = useState("");
   const [notes, setNotes] = useState("");
 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
     if (!hasProfile()) setProfileDialogOpen(true);
   }, []);
 
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-  const taxAmount = subtotal * (taxRate / 100);
+  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.price * (1 - (item.discount ?? 0) / 100), 0);
+  const taxAmount = items.reduce((sum, item) => {
+    const rowSubtotal = item.quantity * item.price * (1 - (item.discount ?? 0) / 100);
+    return sum + rowSubtotal * ((item.taxRate ?? 21) / 100);
+  }, 0);
   const total = subtotal + taxAmount;
 
   useEffect(() => {
@@ -86,6 +101,7 @@ export default function App() {
       currency,
       terms,
       notes,
+      status,
       updatedAt: Date.now()
     };
 
@@ -104,22 +120,32 @@ export default function App() {
     taxRate,
     currency,
     terms,
-    notes
+    notes,
+    status
   ]);
 
   const loadQuoteIntoEditor = (quote: SavedQuote) => {
     setQuoteId(quote.id);
     setCompanyInfo(quote.companyInfo);
     setLogoDataUrl(quote.logoDataUrl);
-    setClientInfo(quote.clientInfo);
+    setClientInfo({
+      ...quote.clientInfo,
+      cuit: quote.clientInfo.cuit ?? '',
+      taxCondition: quote.clientInfo.taxCondition ?? ''
+    });
     setQuoteNumber(quote.quoteNumber);
     setQuoteDate(quote.quoteDate);
     setValidUntil(quote.validUntil);
-    setItems(quote.items);
+    setItems(quote.items.map(item => ({
+      ...item,
+      taxRate: item.taxRate ?? 21,
+      discount: item.discount ?? 0
+    })));
     setTaxRate(quote.taxRate);
     setCurrency(quote.currency);
     setTerms(quote.terms);
     setNotes(quote.notes);
+    setStatus(quote.status ?? "borrador");
     setIsEditing(true);
     setView("editor");
   };
@@ -130,21 +156,60 @@ export default function App() {
   };
 
   const handleNewQuote = () => {
+    setTemplatePickerOpen(true);
+  };
+
+  const handleSelectTemplate = (template: QuoteTemplate | null) => {
     const nextNumber = getNextQuoteNumber(quotes);
     const quote = createEmptyQuote(nextNumber);
+
+    if (template) {
+      quote.items = template.defaultItems.map((item, index) => ({
+        ...item,
+        id: `${Date.now()}-${index}`
+      }));
+    }
+
     saveQuote(quote);
     setQuotes(loadQuotes());
     loadQuoteIntoEditor(quote);
+    setTemplatePickerOpen(false);
   };
 
   const handleDeleteQuote = (id: string) => {
+    const deletedQuote = quotes.find((q) => q.id === id);
     deleteQuote(id);
     setQuotes(loadQuotes());
+
+    if (deletedQuote) {
+      toast("Presupuesto eliminado", {
+        action: {
+          label: "Deshacer",
+          onClick: () => {
+            saveQuote(deletedQuote);
+            setQuotes(loadQuotes());
+          }
+        }
+      });
+    } else {
+      toast.success("Presupuesto eliminado");
+    }
+  };
+
+  const handleDuplicateQuote = (id: string) => {
+    const quote = quotes.find((q) => q.id === id);
+    if (!quote) return;
+
+    const nextNumber = getNextQuoteNumber(quotes);
+    duplicateQuote(quote, nextNumber);
+    setQuotes(loadQuotes());
+    toast.success("Presupuesto duplicado");
   };
 
   const handleBackToList = () => {
     setQuotes(loadQuotes());
     setView("list");
+    toast.success("Presupuesto guardado");
   };
 
   const handleCompanyInfoChange = (field: string, value: string) => {
@@ -166,7 +231,9 @@ export default function App() {
       id: Date.now().toString(),
       description: '',
       quantity: 1,
-      price: 0
+      price: 0,
+      taxRate,
+      discount: 0
     };
     setItems([...items, newItem]);
   };
@@ -177,6 +244,7 @@ export default function App() {
 
   const handlePrint = () => {
     window.print();
+    toast.success("PDF generado");
   };
 
   const handleEditProfile = () => {
@@ -191,18 +259,35 @@ export default function App() {
   if (view === "list") {
     return (
       <>
-        <QuoteList
-          quotes={quotes}
-          onOpenQuote={handleOpenQuote}
-          onNewQuote={handleNewQuote}
-          onDeleteQuote={handleDeleteQuote}
-          onEditProfile={handleEditProfile}
-        />
+        <AnimatePresence>
+          {!entered && (
+            <WelcomeScreen onEnter={() => setEntered(true)} />
+          )}
+        </AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: entered ? 1 : 0, y: entered ? 0 : 8 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+        >
+          <QuoteList
+            quotes={quotes}
+            onOpenQuote={handleOpenQuote}
+            onNewQuote={handleNewQuote}
+            onDeleteQuote={handleDeleteQuote}
+            onDuplicateQuote={handleDuplicateQuote}
+            onEditProfile={handleEditProfile}
+          />
+        </motion.div>
         <CompanyProfileDialog
           open={profileDialogOpen}
           onOpenChange={setProfileDialogOpen}
           initialValues={loadProfile()}
           onSave={handleSaveProfile}
+        />
+        <TemplatePickerDialog
+          open={templatePickerOpen}
+          onOpenChange={setTemplatePickerOpen}
+          onSelect={handleSelectTemplate}
         />
       </>
     );
@@ -210,16 +295,25 @@ export default function App() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 py-8 px-4">
+      <AnimatePresence>
+        {!entered && (
+          <WelcomeScreen onEnter={() => setEntered(true)} />
+        )}
+      </AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: entered ? 1 : 0, y: entered ? 0 : 8 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
+      >
+      <div className="min-h-[100dvh] bg-background py-8 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Action Buttons */}
-        <div className="mb-6 flex justify-between items-center print:hidden">
+        <div className="mb-6 flex flex-wrap justify-between items-center gap-3 print:hidden">
           <div className="flex items-center gap-3">
             <Button onClick={handleBackToList} variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver
             </Button>
-            <CurrencySelector currency={currency} onCurrencyChange={setCurrency} />
           </div>
           <div className="flex gap-3">
             <Button
@@ -239,7 +333,7 @@ export default function App() {
         </div>
 
         {/* Quote Document */}
-        <div className="bg-white shadow-lg rounded-lg p-8 print:shadow-none">
+        <div className="bg-card border border-border p-8">
           <QuoteHeader
             companyInfo={companyInfo}
             logoDataUrl={logoDataUrl}
@@ -250,20 +344,29 @@ export default function App() {
           />
 
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-800">PRESUPUESTO</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">PRESUPUESTO</h2>
           </div>
 
-          <ClientInfo
-            clientInfo={clientInfo}
-            quoteNumber={quoteNumber}
-            quoteDate={quoteDate}
-            validUntil={validUntil}
-            onClientInfoChange={handleClientInfoChange}
-            onQuoteNumberChange={setQuoteNumber}
-            onQuoteDateChange={setQuoteDate}
-            onValidUntilChange={setValidUntil}
-            isEditing={isEditing}
-          />
+          <div className={isEditing ? "space-y-6 mb-8" : "grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8"}>
+            <ClientInfo
+              clientInfo={clientInfo}
+              onClientInfoChange={handleClientInfoChange}
+              isEditing={isEditing}
+            />
+            <QuoteDetails
+              quoteNumber={quoteNumber}
+              quoteDate={quoteDate}
+              validUntil={validUntil}
+              currency={currency}
+              status={status}
+              onQuoteNumberChange={setQuoteNumber}
+              onQuoteDateChange={setQuoteDate}
+              onValidUntilChange={setValidUntil}
+              onCurrencyChange={setCurrency}
+              onStatusChange={setStatus}
+              isEditing={isEditing}
+            />
+          </div>
 
           <ServiceItems
             items={items}
@@ -276,11 +379,8 @@ export default function App() {
 
           <QuoteSummary
             subtotal={subtotal}
-            taxRate={taxRate}
             taxAmount={taxAmount}
             total={total}
-            onTaxRateChange={setTaxRate}
-            isEditing={isEditing}
             currency={currency}
           />
 
@@ -303,12 +403,10 @@ export default function App() {
           .print\\:hidden {
             display: none !important;
           }
-          .print\\:shadow-none {
-            box-shadow: none !important;
-          }
         }
       `}</style>
       </div>
+      </motion.div>
       <CompanyProfileDialog
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
