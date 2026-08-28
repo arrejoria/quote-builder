@@ -344,7 +344,7 @@ export default function App() {
           />
 
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">PRESUPUESTO</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">PRESUPUESTO</h2>
           </div>
 
           <div className={isEditing ? "space-y-6 mb-8" : "grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8"}>

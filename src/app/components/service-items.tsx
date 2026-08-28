@@ -43,7 +43,7 @@ export function ServiceItems({ items, onItemChange, onAddItem, onRemoveItem, isE
     return (
       <div className="space-y-4 p-6 bg-muted rounded-lg">
         <div className="flex justify-between items-center">
-          <h3 className="font-bold tracking-tight">Conceptos</h3>
+          <h3 className="font-semibold tracking-tight">Conceptos</h3>
           <Button onClick={onAddItem} size="sm" variant="outline">
             <Plus className="w-4 h-4 mr-2" />
             Añadir Servicio
@@ -111,9 +111,9 @@ export function ServiceItems({ items, onItemChange, onAddItem, onRemoveItem, isE
               </div>
               <div className="flex justify-between items-center pt-1">
                 <span className="text-sm text-muted-foreground">
-                  Subtotal: <span className="font-medium text-foreground">{formatMoney(calculateRowSubtotal(item))} {currency}</span>
-                  {" · "}IVA: <span className="font-medium text-foreground">{formatMoney(calculateRowTax(item))} {currency}</span>
-                  {" · "}Total: <span className="font-medium text-foreground">{formatMoney(calculateRowTotal(item))} {currency}</span>
+                  Subtotal: <span className="font-medium text-foreground tabular-nums">{formatMoney(calculateRowSubtotal(item))} {currency}</span>
+                  {" · "}IVA: <span className="font-medium text-foreground tabular-nums">{formatMoney(calculateRowTax(item))} {currency}</span>
+                  {" · "}Total: <span className="font-medium text-foreground tabular-nums">{formatMoney(calculateRowTotal(item))} {currency}</span>
                 </span>
                 <Button
                   onClick={() => onRemoveItem(item.id)}

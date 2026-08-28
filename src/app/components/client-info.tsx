@@ -28,7 +28,7 @@ export function ClientInfo({ clientInfo, onClientInfoChange, isEditing }: Client
   if (isEditing) {
     return (
       <div className="space-y-4 p-6 bg-muted rounded-lg">
-        <h3 className="font-bold tracking-tight">Cliente</h3>
+        <h3 className="font-semibold tracking-tight">Cliente</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="clientName">Nombre del Cliente</Label>

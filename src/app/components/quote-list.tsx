@@ -37,7 +37,7 @@ export function QuoteList({ quotes, onOpenQuote, onNewQuote, onDeleteQuote, onDu
     <div className="min-h-[100dvh] bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Presupuestos Guardados</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Presupuestos Guardados</h1>
           <div className="flex gap-2">
             <Button onClick={onEditProfile} variant="outline">
               <Building2 className="w-4 h-4 mr-2" />
@@ -86,7 +86,7 @@ export function QuoteList({ quotes, onOpenQuote, onNewQuote, onDeleteQuote, onDu
                         <QuoteStatusBadge status={quote.status ?? "borrador"} />
                       </div>
                     </div>
-                    <p className="font-semibold whitespace-nowrap">
+                    <p className="font-semibold whitespace-nowrap tabular-nums">
                       {calculateTotal(quote).toLocaleString("es-AR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2

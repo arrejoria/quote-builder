@@ -44,7 +44,7 @@ export function QuoteHeader({
   if (isEditing) {
     return (
       <div className="space-y-4 p-6 bg-muted rounded-lg">
-        <h3 className="font-bold tracking-tight">Información de tu Empresa</h3>
+        <h3 className="font-semibold tracking-tight">Información de tu Empresa</h3>
         <div>
           <Label htmlFor="companyLogo">Logo</Label>
           <div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ export function QuoteHeader({
               className="max-h-16 mb-2 object-contain"
             />
           )}
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">{companyInfo.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground mb-2">{companyInfo.name}</h1>
           <p className="text-sm text-muted-foreground whitespace-pre-line">{companyInfo.address}</p>
         </div>
         <div className="text-right text-sm text-muted-foreground">

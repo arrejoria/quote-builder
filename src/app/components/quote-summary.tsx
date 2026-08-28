@@ -15,15 +15,15 @@ export function QuoteSummary({ subtotal, taxAmount, total, currency }: QuoteSumm
       <div className="w-full sm:w-80 space-y-1">
         <div className="flex justify-between py-1.5">
           <span className="text-sm text-muted-foreground">Subtotal</span>
-          <span className="text-sm text-foreground">{formatMoney(subtotal)} {currency}</span>
+          <span className="text-sm text-foreground tabular-nums">{formatMoney(subtotal)} {currency}</span>
         </div>
         <div className="flex justify-between py-1.5">
           <span className="text-sm text-muted-foreground">IVA</span>
-          <span className="text-sm text-foreground">{formatMoney(taxAmount)} {currency}</span>
+          <span className="text-sm text-foreground tabular-nums">{formatMoney(taxAmount)} {currency}</span>
         </div>
         <div className="border-t-2 border-border pt-3 flex justify-between items-baseline">
-          <span className="font-bold tracking-tight">TOTAL</span>
-          <span className="text-2xl font-extrabold tracking-tight text-foreground">{formatMoney(total)} {currency}</span>
+          <span className="font-semibold tracking-tight">TOTAL</span>
+          <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">{formatMoney(total)} {currency}</span>
         </div>
       </div>
     </div>
