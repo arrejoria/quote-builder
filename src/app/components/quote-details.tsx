@@ -1,5 +1,4 @@
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { DrawInput } from "./ui/draw-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { CurrencySelector } from "./currency-selector";
 import { QuoteStatusBadge, QUOTE_STATUS_LABELS } from "./quote-status-badge";
@@ -30,47 +29,48 @@ export function QuoteDetails({
   onValidUntilChange,
   onCurrencyChange,
   onStatusChange,
-  isEditing
+  isEditing,
 }: QuoteDetailsProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-muted rounded-lg">
-        <h3 className="font-semibold tracking-tight">Presupuesto</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="quoteNumber">Nº Presupuesto</Label>
-            <Input
-              id="quoteNumber"
-              value={quoteNumber}
-              onChange={(e) => onQuoteNumberChange(e.target.value)}
-              placeholder="PRE-2024-001"
-            />
-          </div>
-          <div>
+      <div className="space-y-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Presupuesto
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+          <DrawInput
+            label="Nº Presupuesto"
+            value={quoteNumber}
+            onChange={(e) => onQuoteNumberChange(e.target.value)}
+            placeholder="PRE-2024-001"
+          />
+          <div className="space-y-1.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Moneda
+            </span>
             <CurrencySelector currency={currency} onCurrencyChange={onCurrencyChange} />
           </div>
-          <div>
-            <Label htmlFor="quoteDate">Fecha</Label>
-            <Input
-              id="quoteDate"
-              type="date"
-              value={quoteDate}
-              onChange={(e) => onQuoteDateChange(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="validUntil">Vencimiento</Label>
-            <Input
-              id="validUntil"
-              type="date"
-              value={validUntil}
-              onChange={(e) => onValidUntilChange(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="status">Estado</Label>
-            <Select value={status} onValueChange={(value) => onStatusChange(value as QuoteStatus)}>
-              <SelectTrigger id="status">
+          <DrawInput
+            label="Fecha"
+            type="date"
+            value={quoteDate}
+            onChange={(e) => onQuoteDateChange(e.target.value)}
+          />
+          <DrawInput
+            label="Vencimiento"
+            type="date"
+            value={validUntil}
+            onChange={(e) => onValidUntilChange(e.target.value)}
+          />
+          <div className="space-y-1.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Estado
+            </span>
+            <Select
+              value={status}
+              onValueChange={(value) => onStatusChange(value as QuoteStatus)}
+            >
+              <SelectTrigger className="rounded-none border-0 border-b border-border/50 px-0 bg-transparent focus:ring-0 h-auto pb-2 pt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -89,13 +89,22 @@ export function QuoteDetails({
 
   return (
     <div className="text-right">
-      <h3 className="font-semibold text-lg mb-2">Detalles del Presupuesto:</h3>
-      <div className="text-sm text-muted-foreground space-y-1">
-        <p><span className="font-medium">Nº:</span> {quoteNumber}</p>
-        <p><span className="font-medium">Fecha:</span> {new Date(quoteDate).toLocaleDateString('es-ES')}</p>
-        <p><span className="font-medium">Vencimiento:</span> {new Date(validUntil).toLocaleDateString('es-ES')}</p>
-        <p><span className="font-medium">Moneda:</span> {currency}</p>
-        <p className="flex justify-end print:hidden">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+        Presupuesto
+      </p>
+      <div className="text-sm space-y-0.5">
+        <p className="text-muted-foreground">
+          <span className="text-foreground font-medium">Nº </span>
+          {quoteNumber}
+        </p>
+        <p className="text-muted-foreground">
+          {new Date(quoteDate).toLocaleDateString("es-AR")}
+        </p>
+        <p className="text-muted-foreground">
+          Vence: {new Date(validUntil).toLocaleDateString("es-AR")}
+        </p>
+        <p className="text-muted-foreground">{currency}</p>
+        <p className="flex justify-end pt-1 print:hidden">
           <QuoteStatusBadge status={status} />
         </p>
       </div>

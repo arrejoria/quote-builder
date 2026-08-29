@@ -1,4 +1,3 @@
-import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface CurrencySelectorProps {
@@ -8,18 +7,15 @@ interface CurrencySelectorProps {
 
 export function CurrencySelector({ currency, onCurrencyChange }: CurrencySelectorProps) {
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="currency" className="text-sm font-medium">Moneda:</Label>
-      <Select value={currency} onValueChange={onCurrencyChange}>
-        <SelectTrigger id="currency" className="w-32">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ARS">ARS ($)</SelectItem>
-          <SelectItem value="USD">USD ($)</SelectItem>
-          <SelectItem value="EUR">EUR (€)</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={currency} onValueChange={onCurrencyChange}>
+      <SelectTrigger className="rounded-none border-0 border-b border-border/50 px-0 bg-transparent focus:ring-0 h-auto pb-2 pt-1">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="ARS">ARS ($)</SelectItem>
+        <SelectItem value="USD">USD ($)</SelectItem>
+        <SelectItem value="EUR">EUR (€)</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }
