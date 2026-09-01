@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { serve, serveStatic } from "@hono/node-server";
+import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
