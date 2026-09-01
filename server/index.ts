@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { serve } from "@hono/node-server";
+import { serve, serveStatic } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
@@ -43,6 +43,12 @@ app.route("/api/quotes", quotesRouter);
 app.route("/api/profile", profileRouter);
 
 app.get("/health", (c) => c.json({ ok: true }));
+
+// Serve frontend static files in production
+if (process.env.NODE_ENV === "production") {
+  app.use("/*", serveStatic({ root: "./dist" }));
+  app.use("/*", serveStatic({ path: "./dist/index.html" }));
+}
 
 const port = Number(process.env.PORT ?? 3001);
 serve({ fetch: app.fetch, port }, () => {
