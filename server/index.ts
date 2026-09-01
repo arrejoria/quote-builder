@@ -5,8 +5,8 @@ import { cors } from "hono/cors";
 import { auth } from "./auth";
 import { quotesRouter } from "./routes/quotes";
 import { profileRouter } from "./routes/profile";
-import { rateLimit } from "./middleware/rate-limit";
-import { verifyTurnstile } from "./middleware/turnstile";
+import { checkRateLimit } from "./middleware/rate-limit";
+import { checkTurnstile } from "./middleware/turnstile";
 
 const app = new Hono();
 
@@ -20,23 +20,23 @@ app.use(
   })
 );
 
-// Sign-up: Turnstile verification + tight rate limit (5 per 15 min per IP)
-app.post(
-  "/api/auth/sign-up/email",
-  rateLimit({ max: 5, windowMs: 15 * 60 * 1000, key: "signup" }),
-  verifyTurnstile,
-  (c) => auth.handler(c.req.raw)
-);
+// Better Auth handles all /api/auth/* routes.
+// Rate limiting and Turnstile are checked inline to avoid Hono wildcard conflicts.
+app.on(["GET", "POST"], "/api/auth/**", async (c) => {
+  const path = c.req.path;
+  const method = c.req.method;
 
-// Sign-in: rate limit only (20 per 15 min per IP)
-app.post(
-  "/api/auth/sign-in/email",
-  rateLimit({ max: 20, windowMs: 15 * 60 * 1000, key: "signin" }),
-  (c) => auth.handler(c.req.raw)
-);
+  if (method === "POST" && path === "/api/auth/sign-up/email") {
+    const err = checkRateLimit(c, { max: 5, windowMs: 15 * 60 * 1000, key: "signup" })
+      ?? (await checkTurnstile(c));
+    if (err) return err;
+  } else if (method === "POST" && path === "/api/auth/sign-in/email") {
+    const err = checkRateLimit(c, { max: 20, windowMs: 15 * 60 * 1000, key: "signin" });
+    if (err) return err;
+  }
 
-// Better Auth handles all other /api/auth/* routes
-app.on(["GET", "POST"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+  return auth.handler(c.req.raw);
+});
 
 // App routes
 app.route("/api/quotes", quotesRouter);

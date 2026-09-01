@@ -1,19 +1,19 @@
-import type { Context, Next } from "hono";
+import type { Context } from "hono";
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v1/siteverify";
 
-export async function verifyTurnstile(c: Context, next: Next) {
+export async function checkTurnstile(c: Context): Promise<Response | null> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
 
-  // If no secret configured, skip verification (dev fallback).
-  if (!secret) {
-    await next();
-    return;
-  }
+  // No secret configured → skip (dev fallback).
+  if (!secret) return null;
 
   const token = c.req.header("x-turnstile-token");
   if (!token) {
-    return c.json({ error: "Missing Turnstile token" }, 400);
+    return new Response(JSON.stringify({ error: "Missing Turnstile token" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const ip =
@@ -27,8 +27,11 @@ export async function verifyTurnstile(c: Context, next: Next) {
   const data = (await res.json()) as { success: boolean; "error-codes"?: string[] };
 
   if (!data.success) {
-    return c.json({ error: "Turnstile verification failed", codes: data["error-codes"] }, 403);
+    return new Response(
+      JSON.stringify({ error: "Turnstile verification failed", codes: data["error-codes"] }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
   }
 
-  await next();
+  return null;
 }

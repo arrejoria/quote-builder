@@ -1,4 +1,4 @@
-import type { Context, Next } from "hono";
+import type { Context } from "hono";
 
 interface BucketEntry {
   count: number;
@@ -15,7 +15,6 @@ function getIp(c: Context): string {
   );
 }
 
-// Prune expired entries every 500 requests to avoid memory growth.
 let pruneCounter = 0;
 function maybePrune() {
   if (++pruneCounter < 500) return;
@@ -26,28 +25,31 @@ function maybePrune() {
   }
 }
 
-export function rateLimit(options: { max: number; windowMs: number; key?: string }) {
-  return async (c: Context, next: Next) => {
-    const ip = getIp(c);
-    const bucketKey = `${options.key ?? c.req.path}:${ip}`;
-    const now = Date.now();
+export function checkRateLimit(
+  c: Context,
+  options: { max: number; windowMs: number; key: string }
+): Response | null {
+  const ip = getIp(c);
+  const bucketKey = `${options.key}:${ip}`;
+  const now = Date.now();
 
-    maybePrune();
+  maybePrune();
 
-    let entry = buckets.get(bucketKey);
-    if (!entry || entry.resetAt < now) {
-      entry = { count: 0, resetAt: now + options.windowMs };
-      buckets.set(bucketKey, entry);
-    }
+  let entry = buckets.get(bucketKey);
+  if (!entry || entry.resetAt < now) {
+    entry = { count: 0, resetAt: now + options.windowMs };
+    buckets.set(bucketKey, entry);
+  }
 
-    entry.count++;
+  entry.count++;
 
-    if (entry.count > options.max) {
-      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-      c.header("Retry-After", String(retryAfter));
-      return c.json({ error: "Too many requests" }, 429);
-    }
+  if (entry.count > options.max) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": String(retryAfter) },
+    });
+  }
 
-    await next();
-  };
+  return null;
 }
