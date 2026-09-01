@@ -9,6 +9,7 @@
     "dev:server": "tsx watch server/index.ts",
     "build": "vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
+    "deploy": "ssh root@46.62.235.11 'cd /var/www/presupuestador && git pull && pnpm install && pnpm build && pm2 restart presupuestador --update-env'",
     "preview": "vite preview",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
