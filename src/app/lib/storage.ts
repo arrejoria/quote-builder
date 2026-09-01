@@ -14,6 +14,7 @@ export interface CompanyProfile {
   phone: string;
   email: string;
   website: string;
+  logoDataUrl?: string;
 }
 
 export interface ClientInfo {

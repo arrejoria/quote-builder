@@ -1,7 +1,8 @@
 import { gsap } from "gsap";
 import { useLayoutEffect, useRef } from "react";
-import { LayoutDashboard, Users, FileText, Receipt, Settings, HelpCircle, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Receipt, Settings, HelpCircle, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "./ui/utils";
+import { useAuth } from "../../contexts/AuthContext";
 
 type NavItem = { id: string; label: string; icon: React.FC<{ className?: string }>; enabled: boolean };
 
@@ -16,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
 export function AppSidebar() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
+  const { user, isAuthenticated, signOut } = useAuth();
 
   useLayoutEffect(() => {
     gsap.fromTo(sidebarRef.current,
@@ -34,7 +36,7 @@ export function AppSidebar() {
   return (
     <div
       ref={sidebarRef}
-      className="w-[220px] shrink-0 flex flex-col h-full bg-sidebar border-r border-sidebar-border"
+      className="w-[220px] shrink-0 flex flex-col h-full bg-sidebar border-r border-sidebar-border print:hidden"
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-[18px] border-b border-sidebar-border">
@@ -70,7 +72,7 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="px-2 pb-3 pt-2 border-t border-sidebar-border">
+      <div className="px-2 pb-3 pt-2 border-t border-sidebar-border space-y-0.5">
         <div className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-white/40 cursor-default select-none">
           <div className="flex items-center gap-2.5">
             <HelpCircle className="w-4 h-4 shrink-0" />
@@ -78,6 +80,20 @@ export function AppSidebar() {
           </div>
           <ChevronRight className="w-3.5 h-3.5" />
         </div>
+
+        {isAuthenticated && (
+          <div className="px-3 py-2 border-t border-sidebar-border mt-1 pt-3">
+            <p className="text-xs text-white/30 truncate mb-2">{user?.email}</p>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors w-full"
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

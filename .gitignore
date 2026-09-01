@@ -6,3 +6,5 @@ dist
 .atl
 *.zip
 presupuesto-*.html
+.env
+drizzle/

@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "./ui/dialog";
 import { DrawInput } from "./ui/draw-input";
 import { CompanyProfile } from "../lib/storage";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { X } from "lucide-react";
 
-const BLANK: CompanyProfile = { name: "", address: "", phone: "", email: "", website: "" };
+const BLANK: CompanyProfile = { name: "", address: "", phone: "", email: "", website: "", logoDataUrl: undefined };
 
 interface CompanyProfileDialogProps {
   open: boolean;
@@ -17,6 +19,7 @@ interface CompanyProfileDialogProps {
 export function CompanyProfileDialog({ open, onOpenChange, initialValues, onSave }: CompanyProfileDialogProps) {
   const [values, setValues] = useState<CompanyProfile>(initialValues ?? BLANK);
   const [nameError, setNameError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) { setValues(initialValues ?? BLANK); setNameError(false); }
@@ -25,6 +28,18 @@ export function CompanyProfileDialog({ open, onOpenChange, initialValues, onSave
   const set = (field: keyof CompanyProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setValues((v) => ({ ...v, [field]: e.target.value }));
     if (field === "name") setNameError(false);
+  };
+
+  const handleLogoInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setValues((v) => ({ ...v, logoDataUrl: reader.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,6 +94,35 @@ export function CompanyProfileDialog({ open, onOpenChange, initialValues, onSave
             placeholder="Av. Corrientes 1234, CABA, Argentina"
             rows={2}
           />
+
+          {/* Logo */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Logo</p>
+            {values.logoDataUrl ? (
+              <div className="flex items-center gap-3">
+                <ImageWithFallback
+                  src={values.logoDataUrl}
+                  alt="Logo"
+                  className="max-h-10 max-w-[120px] object-contain border border-border rounded p-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setValues((v) => ({ ...v, logoDataUrl: undefined })); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-3 h-3" /> Eliminar
+                </button>
+              </div>
+            ) : (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoInput}
+                className="text-sm text-muted-foreground file:mr-3 file:text-xs file:font-medium file:bg-transparent file:border file:border-border file:rounded file:px-3 file:py-1.5 file:cursor-pointer hover:file:border-foreground file:transition-colors"
+              />
+            )}
+          </div>
 
           <div className="flex justify-end pt-2">
             <button

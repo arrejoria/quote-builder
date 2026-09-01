@@ -1,8 +1,11 @@
 import { gsap } from "gsap";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { WelcomeScreen } from "./components/welcome-screen";
+import { AuthPage } from "./components/auth/AuthPage";
+import { GuestBanner, GUEST_QUOTA } from "./components/auth/GuestBanner";
 import { AppSidebar } from "./components/app-sidebar";
+import { useAuth } from "../contexts/AuthContext";
 import { QuoteHeader } from "./components/quote-header";
 import { ClientInfo } from "./components/client-info";
 import { QuoteDetails } from "./components/quote-details";
@@ -15,9 +18,13 @@ import { TemplatePickerDialog } from "./components/template-picker-dialog";
 import { Edit, Printer, Eye, ArrowLeft } from "lucide-react";
 import {
   CompanyProfile, QuoteStatus, SavedQuote,
-  createEmptyQuote, deleteQuote, duplicateQuote, getNextQuoteNumber,
-  hasProfile, loadProfile, loadQuotes, saveProfile, saveQuote,
+  createEmptyQuote, getNextQuoteNumber,
 } from "./lib/storage";
+import { getProfile, upsertProfile } from "../lib/profile-service";
+import {
+  listQuotes, getFullQuote, createQuote, persistQuote,
+  removeQuote, cloneQuote, importLocalQuotes,
+} from "../lib/quotes-service";
 import { QuoteTemplate } from "./lib/templates";
 
 type View = "list" | "editor";
@@ -42,12 +49,58 @@ function useViewTransition() {
   return { containerRef, transitionTo };
 }
 
+const GUEST_KEY = "presupuestador:guestMode";
+
 export default function App() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [isGuest, setIsGuest] = useState(() => localStorage.getItem(GUEST_KEY) === "true");
+
+  const handleGuestContinue = () => {
+    localStorage.setItem(GUEST_KEY, "true");
+    setIsGuest(true);
+  };
+
+  const handleSignUpFromGuest = () => {
+    localStorage.removeItem(GUEST_KEY);
+    setIsGuest(false);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.removeItem(GUEST_KEY);
+      setIsGuest(false);
+    }
+  }, [isAuthenticated]);
+
   const [view, setView] = useState<View>("list");
-  const [quotes, setQuotes] = useState<SavedQuote[]>(() => loadQuotes());
+  const [quotes, setQuotes] = useState<SavedQuote[]>([]);
   const [quoteId, setQuoteId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(true);
   const [entered, setEntered] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasAuthenticatedRef = useRef(false);
+  const documentRef = useRef<HTMLDivElement>(null);
+
+  const refreshQuotes = useCallback(async () => {
+    const list = await listQuotes(isAuthenticated);
+    setQuotes(list);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!entered) return;
+    if (!isAuthenticated && !isGuest) return;
+    refreshQuotes();
+  }, [entered, isAuthenticated, isGuest, refreshQuotes]);
+
+  // Guest → account migration: runs once on first sign-in
+  useEffect(() => {
+    if (isAuthenticated && !wasAuthenticatedRef.current) {
+      importLocalQuotes()
+        .then(() => refreshQuotes())
+        .catch(() => {});
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated, refreshQuotes]);
 
   const [companyInfo, setCompanyInfo] = useState({ name: "", address: "", phone: "", email: "", website: "" });
   const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>(undefined);
@@ -64,10 +117,49 @@ export default function App() {
 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [profileData, setProfileData] = useState<CompanyProfile | null>(null);
 
   const { containerRef, transitionTo } = useViewTransition();
 
-  useEffect(() => { if (!hasProfile()) setProfileDialogOpen(true); }, []);
+  const handleExportPdf = async () => {
+    const el = documentRef.current;
+    if (!el) return;
+    const toastId = toast.loading("Generando PDF…");
+    try {
+      const [{ toJpeg }, { default: jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
+      const dataUrl = await toJpeg(el, { quality: 0.97, pixelRatio: 2, backgroundColor: "#ffffff" });
+      const img = new Image();
+      await new Promise<void>((res) => { img.onload = () => res(); img.src = dataUrl; });
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (img.naturalHeight * imgW) / img.naturalWidth;
+      let yOffset = 0;
+      let remaining = imgH;
+      while (remaining > 0) {
+        pdf.addImage(dataUrl, "JPEG", 0, -yOffset, imgW, imgH);
+        remaining -= pageH;
+        if (remaining > 0) { pdf.addPage(); yOffset += pageH; }
+      }
+      pdf.save(`Presupuesto-${quoteNumber}.pdf`);
+      toast.success("PDF descargado", { id: toastId });
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("Error al generar el PDF", { id: toastId });
+    }
+  };
+
+  useEffect(() => {
+    if (!entered || (!isAuthenticated && !isGuest)) return;
+    getProfile(isAuthenticated).then((p) => {
+      setProfileData(p);
+      if (!p) setProfileDialogOpen(true);
+    });
+  }, [entered, isAuthenticated, isGuest]);
 
   const subtotal = items.reduce((sum, item) => sum + item.quantity * item.price * (1 - (item.discount ?? 0) / 100), 0);
   const taxAmount = items.reduce((sum, item) => {
@@ -82,9 +174,19 @@ export default function App() {
       id: quoteId, companyInfo, clientInfo, logoDataUrl, quoteNumber, quoteDate,
       validUntil, items, taxRate, currency, terms, notes, status, updatedAt: Date.now(),
     };
-    saveQuote(quote);
-    setQuotes(loadQuotes());
-  }, [view, quoteId, companyInfo, clientInfo, logoDataUrl, quoteNumber, quoteDate, validUntil, items, taxRate, currency, terms, notes, status]);
+    if (!isAuthenticated) {
+      persistQuote(quote, false);
+      listQuotes(false).then(setQuotes);
+      return;
+    }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      persistQuote(quote, true)
+        .then(() => listQuotes(true))
+        .then(setQuotes)
+        .catch(() => toast.error("Error al guardar"));
+    }, 1500);
+  }, [view, quoteId, companyInfo, clientInfo, logoDataUrl, quoteNumber, quoteDate, validUntil, items, taxRate, currency, terms, notes, status, isAuthenticated]);
 
   const loadQuoteIntoEditor = (quote: SavedQuote) => {
     setQuoteId(quote.id);
@@ -107,47 +209,78 @@ export default function App() {
     transitionTo("out", () => { action(); setView(nextView); });
   };
 
-  const handleOpenQuote = (id: string) => {
-    const quote = quotes.find((q) => q.id === id);
+  const handleOpenQuote = async (id: string) => {
+    const quote = await getFullQuote(id, isAuthenticated);
     if (!quote) return;
     navigateTo("editor", () => loadQuoteIntoEditor(quote));
   };
 
-  const handleNewQuote = () => setTemplatePickerOpen(true);
+  const handleNewQuote = () => {
+    if (isGuest && quotes.length >= GUEST_QUOTA) {
+      toast("Guest limit reached", {
+        description: "Create a free account to add unlimited quotes.",
+        action: { label: "Sign up", onClick: handleSignUpFromGuest },
+      });
+      return;
+    }
+    setTemplatePickerOpen(true);
+  };
 
-  const handleSelectTemplate = (template: QuoteTemplate | null) => {
+  const handleSelectTemplate = async (template: QuoteTemplate | null) => {
     const nextNumber = getNextQuoteNumber(quotes);
     const quote = createEmptyQuote(nextNumber);
+    if (profileData) {
+      quote.companyInfo = { ...profileData };
+      if (profileData.logoDataUrl) quote.logoDataUrl = profileData.logoDataUrl;
+    }
     if (template) {
       quote.items = template.defaultItems.map((item, i) => ({ ...item, id: `${Date.now()}-${i}` }));
     }
-    saveQuote(quote);
-    setQuotes(loadQuotes());
+    await createQuote(quote, isAuthenticated);
+    await refreshQuotes();
     navigateTo("editor", () => loadQuoteIntoEditor(quote));
     setTemplatePickerOpen(false);
   };
 
-  const handleDeleteQuote = (id: string) => {
+  const handleDeleteQuote = async (id: string) => {
     const deleted = quotes.find((q) => q.id === id);
-    deleteQuote(id);
-    setQuotes(loadQuotes());
+    await removeQuote(id, isAuthenticated);
+    await refreshQuotes();
     if (deleted) {
       toast("Presupuesto eliminado", {
-        action: { label: "Deshacer", onClick: () => { saveQuote(deleted); setQuotes(loadQuotes()); } },
+        action: {
+          label: "Deshacer",
+          onClick: () => createQuote(deleted, isAuthenticated).then(refreshQuotes),
+        },
       });
     }
   };
 
-  const handleDuplicateQuote = (id: string) => {
+  const handleDuplicateQuote = async (id: string) => {
     const quote = quotes.find((q) => q.id === id);
     if (!quote) return;
-    duplicateQuote(quote, getNextQuoteNumber(quotes));
-    setQuotes(loadQuotes());
+    await cloneQuote(quote, getNextQuoteNumber(quotes), isAuthenticated);
+    await refreshQuotes();
     toast.success("Presupuesto duplicado");
   };
 
   const handleBackToList = () => {
-    navigateTo("list", () => { setQuotes(loadQuotes()); toast.success("Presupuesto guardado"); });
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    navigateTo("list", () => {
+      if (quoteId) {
+        const quote: SavedQuote = {
+          id: quoteId, companyInfo, clientInfo, logoDataUrl, quoteNumber, quoteDate,
+          validUntil, items, taxRate, currency, terms, notes, status, updatedAt: Date.now(),
+        };
+        persistQuote(quote, isAuthenticated)
+          .then(refreshQuotes)
+          .catch(() => {});
+      }
+      toast.success("Presupuesto guardado");
+    });
   };
 
   useLayoutEffect(() => {
@@ -156,6 +289,12 @@ export default function App() {
   }, [view, entered]);
 
   if (!entered) return <WelcomeScreen onEnter={() => setEntered(true)} />;
+  if (isLoading) return (
+    <div className="flex h-[100dvh] items-center justify-center bg-background">
+      <div className="w-5 h-5 rounded-full border-2 border-border border-t-primary animate-spin" />
+    </div>
+  );
+  if (!isAuthenticated && !isGuest) return <AuthPage onGuestContinue={handleGuestContinue} />;
 
   return (
     <div className="flex h-[100dvh] bg-background overflow-hidden">
@@ -165,6 +304,9 @@ export default function App() {
       <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
         {view === "list" ? (
           <>
+            {isGuest && (
+              <GuestBanner quoteCount={quotes.length} onSignUp={handleSignUpFromGuest} />
+            )}
             <QuoteList
               quotes={quotes}
               onOpenQuote={handleOpenQuote}
@@ -176,8 +318,11 @@ export default function App() {
             <CompanyProfileDialog
               open={profileDialogOpen}
               onOpenChange={setProfileDialogOpen}
-              initialValues={loadProfile()}
-              onSave={(p: CompanyProfile) => { saveProfile(p); setProfileDialogOpen(false); }}
+              initialValues={profileData}
+              onSave={(p: CompanyProfile) => {
+                upsertProfile(p, isAuthenticated).then(() => setProfileData(p));
+                setProfileDialogOpen(false);
+              }}
             />
             <TemplatePickerDialog
               open={templatePickerOpen}
@@ -213,11 +358,11 @@ export default function App() {
                 {!isEditing && (
                   <button
                     type="button"
-                    onClick={() => { window.print(); toast.success("PDF generado"); }}
+                    onClick={handleExportPdf}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-white hover:bg-muted transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Imprimir / PDF
+                    Descargar PDF
                   </button>
                 )}
               </div>
@@ -225,7 +370,7 @@ export default function App() {
 
             {/* Document */}
             <div className="max-w-4xl mx-auto px-6 py-8">
-              <div className="bg-white border border-border rounded-xl shadow-sm p-8">
+              <div ref={documentRef} className="bg-white border border-border rounded-xl shadow-sm p-8">
                 <QuoteHeader
                   companyInfo={companyInfo}
                   logoDataUrl={logoDataUrl}
@@ -285,18 +430,15 @@ export default function App() {
               </div>
             </div>
 
-            <style>{`
-              @media print {
-                body { background: white; }
-                .print\\:hidden { display: none !important; }
-              }
-            `}</style>
 
             <CompanyProfileDialog
               open={profileDialogOpen}
               onOpenChange={setProfileDialogOpen}
-              initialValues={loadProfile()}
-              onSave={(p: CompanyProfile) => { saveProfile(p); setProfileDialogOpen(false); }}
+              initialValues={profileData}
+              onSave={(p: CompanyProfile) => {
+                upsertProfile(p, isAuthenticated).then(() => setProfileData(p));
+                setProfileDialogOpen(false);
+              }}
             />
           </div>
         )}
