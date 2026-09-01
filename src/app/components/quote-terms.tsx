@@ -1,5 +1,4 @@
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
+import { DrawInput } from "./ui/draw-input";
 
 interface QuoteTermsProps {
   terms: string;
@@ -12,27 +11,23 @@ interface QuoteTermsProps {
 export function QuoteTerms({ terms, notes, onTermsChange, onNotesChange, isEditing }: QuoteTermsProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-muted rounded-lg">
-        <div>
-          <Label htmlFor="terms">Términos y Condiciones</Label>
-          <Textarea
-            id="terms"
-            value={terms}
-            onChange={(e) => onTermsChange(e.target.value)}
-            rows={6}
-            placeholder="Incluye aquí tus términos y condiciones..."
-          />
-        </div>
-        <div>
-          <Label htmlFor="notes">Notas Adicionales</Label>
-          <Textarea
-            id="notes"
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            rows={4}
-            placeholder="Notas adicionales o información relevante..."
-          />
-        </div>
+      <div className="space-y-6 pt-2">
+        <DrawInput
+          as="textarea"
+          label="Términos y condiciones"
+          value={terms}
+          onChange={(e) => onTermsChange(e.target.value)}
+          rows={5}
+          placeholder="Incluye aquí tus términos y condiciones..."
+        />
+        <DrawInput
+          as="textarea"
+          label="Notas adicionales"
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          rows={3}
+          placeholder="Notas adicionales o información relevante..."
+        />
       </div>
     );
   }
@@ -41,14 +36,18 @@ export function QuoteTerms({ terms, notes, onTermsChange, onNotesChange, isEditi
     <div className="space-y-6 text-sm">
       {terms && (
         <div>
-          <h3 className="font-semibold mb-2">Términos y Condiciones:</h3>
-          <p className="text-muted-foreground whitespace-pre-line">{terms}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
+            Términos y condiciones
+          </p>
+          <p className="text-muted-foreground whitespace-pre-line leading-relaxed">{terms}</p>
         </div>
       )}
       {notes && (
         <div>
-          <h3 className="font-semibold mb-2">Notas:</h3>
-          <p className="text-muted-foreground whitespace-pre-line">{notes}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
+            Notas
+          </p>
+          <p className="text-muted-foreground whitespace-pre-line leading-relaxed">{notes}</p>
         </div>
       )}
     </div>

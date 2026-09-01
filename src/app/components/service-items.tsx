@@ -1,7 +1,5 @@
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+import { DrawInput } from "./ui/draw-input";
+import { DrawButton } from "./ui/draw-button";
 import { Trash2, Plus } from "lucide-react";
 
 export interface ServiceItem {
@@ -23,109 +21,125 @@ interface ServiceItemsProps {
 }
 
 function formatMoney(value: number) {
-  return value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function calculateRowSubtotal(item: ServiceItem) {
+function rowSubtotal(item: ServiceItem) {
   return item.quantity * item.price * (1 - item.discount / 100);
 }
 
-function calculateRowTax(item: ServiceItem) {
-  return calculateRowSubtotal(item) * (item.taxRate / 100);
+function rowTax(item: ServiceItem) {
+  return rowSubtotal(item) * (item.taxRate / 100);
 }
 
-function calculateRowTotal(item: ServiceItem) {
-  return calculateRowSubtotal(item) + calculateRowTax(item);
+function rowTotal(item: ServiceItem) {
+  return rowSubtotal(item) + rowTax(item);
 }
 
 export function ServiceItems({ items, onItemChange, onAddItem, onRemoveItem, isEditing, currency }: ServiceItemsProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4 p-6 bg-muted rounded-lg">
+      <div className="space-y-5 mb-8">
         <div className="flex justify-between items-center">
-          <h3 className="font-bold tracking-tight">Conceptos</h3>
-          <Button onClick={onAddItem} size="sm" variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Añadir Servicio
-          </Button>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Conceptos
+          </p>
+          <DrawButton onClick={onAddItem} size="sm" magnetic={false}>
+            <Plus className="w-3.5 h-3.5" />
+            Añadir
+          </DrawButton>
         </div>
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="space-y-3 bg-card p-4 rounded border">
-              <div>
-                <Label htmlFor={`desc-${item.id}`}>Descripción</Label>
-                <Textarea
-                  id={`desc-${item.id}`}
-                  value={item.description}
-                  onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
-                  rows={2}
+
+        <div className="space-y-6">
+          {items.map((item, index) => (
+            <div key={item.id} className="space-y-4">
+              {/* Row number */}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">
+                  #{String(index + 1).padStart(2, "0")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveItem(item.id)}
+                  className="text-destructive/60 hover:text-destructive transition-colors cursor-pointer p-0.5"
+                  title="Eliminar"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <DrawInput
+                as="textarea"
+                label="Descripción"
+                value={item.description}
+                onChange={(e) => onItemChange(item.id, "description", e.target.value)}
+                rows={2}
+                placeholder="Descripción del servicio o producto"
+              />
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+                <DrawInput
+                  label="Cantidad"
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => onItemChange(item.id, "quantity", parseFloat(e.target.value) || 0)}
+                  min="0"
+                  step="0.5"
+                />
+                <DrawInput
+                  label="Precio"
+                  type="number"
+                  value={item.price}
+                  onChange={(e) => onItemChange(item.id, "price", parseFloat(e.target.value) || 0)}
+                  min="0"
+                  step="0.01"
+                />
+                <DrawInput
+                  label="IVA %"
+                  type="number"
+                  value={item.taxRate}
+                  onChange={(e) => onItemChange(item.id, "taxRate", parseFloat(e.target.value) || 0)}
+                  min="0"
+                  max="100"
+                  step="1"
+                />
+                <DrawInput
+                  label="Descuento %"
+                  type="number"
+                  value={item.discount}
+                  onChange={(e) => onItemChange(item.id, "discount", parseFloat(e.target.value) || 0)}
+                  min="0"
+                  max="100"
+                  step="1"
                 />
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div>
-                  <Label htmlFor={`qty-${item.id}`}>Cantidad</Label>
-                  <Input
-                    id={`qty-${item.id}`}
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => onItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`price-${item.id}`}>Precio</Label>
-                  <Input
-                    id={`price-${item.id}`}
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => onItemChange(item.id, 'price', parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`tax-${item.id}`}>Impuestos (%)</Label>
-                  <Input
-                    id={`tax-${item.id}`}
-                    type="number"
-                    value={item.taxRate}
-                    onChange={(e) => onItemChange(item.id, 'taxRate', parseFloat(e.target.value) || 0)}
-                    min="0"
-                    max="100"
-                    step="1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`discount-${item.id}`}>Descuento (%)</Label>
-                  <Input
-                    id={`discount-${item.id}`}
-                    type="number"
-                    value={item.discount}
-                    onChange={(e) => onItemChange(item.id, 'discount', parseFloat(e.target.value) || 0)}
-                    min="0"
-                    max="100"
-                    step="1"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-1">
-                <span className="text-sm text-muted-foreground">
-                  Subtotal: <span className="font-medium text-foreground">{formatMoney(calculateRowSubtotal(item))} {currency}</span>
-                  {" · "}IVA: <span className="font-medium text-foreground">{formatMoney(calculateRowTax(item))} {currency}</span>
-                  {" · "}Total: <span className="font-medium text-foreground">{formatMoney(calculateRowTotal(item))} {currency}</span>
+
+              <div className="flex gap-4 text-xs text-muted-foreground tabular-nums pt-1">
+                <span>
+                  Subtotal <span className="text-foreground font-medium">{formatMoney(rowSubtotal(item))} {currency}</span>
                 </span>
-                <Button
-                  onClick={() => onRemoveItem(item.id)}
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <span>·</span>
+                <span>
+                  IVA <span className="text-foreground font-medium">{formatMoney(rowTax(item))} {currency}</span>
+                </span>
+                <span>·</span>
+                <span>
+                  Total <span className="text-foreground font-semibold">{formatMoney(rowTotal(item))} {currency}</span>
+                </span>
               </div>
+
+              {/* Separator between items */}
+              {index < items.length - 1 && (
+                <div className="h-px bg-border/40" />
+              )}
             </div>
           ))}
+
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground/50 text-center py-8">
+              Todavía no hay conceptos — agregá el primero
+            </p>
+          )}
         </div>
       </div>
     );
@@ -133,28 +147,42 @@ export function ServiceItems({ items, onItemChange, onAddItem, onRemoveItem, isE
 
   return (
     <div className="mb-8">
-      <h3 className="font-semibold text-lg mb-4">Servicios:</h3>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-4">
+        Conceptos
+      </p>
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-muted border-b-2 border-border">
-            <tr>
-              <th className="text-left p-3 text-sm font-semibold">Descripción</th>
-              <th className="text-center p-3 text-sm font-semibold w-20">Cantidad</th>
-              <th className="text-right p-3 text-sm font-semibold w-28">Precio Unit.</th>
-              <th className="text-right p-3 text-sm font-semibold w-20">Impuestos</th>
-              <th className="text-right p-3 text-sm font-semibold w-20">Descuento</th>
-              <th className="text-right p-3 text-sm font-semibold w-28">Subtotal</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                Descripción
+              </th>
+              <th className="text-center pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground w-16">
+                Cant.
+              </th>
+              <th className="text-right pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground w-28">
+                Precio unit.
+              </th>
+              <th className="text-right pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground w-16">
+                IVA
+              </th>
+              <th className="text-right pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground w-16">
+                Desc.
+              </th>
+              <th className="text-right pb-2 font-semibold text-[10px] uppercase tracking-[0.1em] text-muted-foreground w-28">
+                Subtotal
+              </th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-b">
-                <td className="p-3 text-sm whitespace-pre-line">{item.description}</td>
-                <td className="p-3 text-sm text-center">{item.quantity}</td>
-                <td className="p-3 text-sm text-right">{formatMoney(item.price)} {currency}</td>
-                <td className="p-3 text-sm text-right">{item.taxRate}%</td>
-                <td className="p-3 text-sm text-right">{item.discount}%</td>
-                <td className="p-3 text-sm text-right font-medium">{formatMoney(calculateRowSubtotal(item))} {currency}</td>
+              <tr key={item.id} className="border-b border-border/40">
+                <td className="py-3 pr-4 whitespace-pre-line">{item.description}</td>
+                <td className="py-3 text-center text-muted-foreground">{item.quantity}</td>
+                <td className="py-3 text-right tabular-nums">{formatMoney(item.price)} {currency}</td>
+                <td className="py-3 text-right text-muted-foreground">{item.taxRate}%</td>
+                <td className="py-3 text-right text-muted-foreground">{item.discount}%</td>
+                <td className="py-3 text-right font-medium tabular-nums">{formatMoney(rowSubtotal(item))} {currency}</td>
               </tr>
             ))}
           </tbody>

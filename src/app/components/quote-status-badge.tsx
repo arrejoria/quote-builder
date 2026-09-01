@@ -11,10 +11,10 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
 
 const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
   borrador: "bg-muted text-foreground border-border",
-  enviado: "bg-transparent text-foreground border-foreground",
-  aceptado: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  enviado: "bg-secondary text-secondary-foreground border-border",
+  aceptado: "bg-success text-success-foreground border-success/30",
   rechazado: "bg-destructive/10 text-destructive border-destructive/30",
-  vencido: "bg-amber-100 text-amber-800 border-amber-300"
+  vencido: "bg-warning text-warning-foreground border-warning/30"
 };
 
 interface QuoteStatusBadgeProps {
