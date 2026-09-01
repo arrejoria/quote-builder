@@ -7,7 +7,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, turnstileToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -21,8 +21,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.error) throw new Error(result.error.message ?? "Sign in failed");
   };
 
-  const handleSignUp = async (name: string, email: string, password: string) => {
-    const result = await authClient.signUp.email({ name, email, password });
+  const handleSignUp = async (name: string, email: string, password: string, turnstileToken?: string) => {
+    const headers: Record<string, string> = {};
+    if (turnstileToken) headers["x-turnstile-token"] = turnstileToken;
+    const result = await authClient.signUp.email(
+      { name, email, password },
+      { headers }
+    );
     if (result.error) throw new Error(result.error.message ?? "Sign up failed");
   };
 
@@ -37,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!session?.user,
         isLoading: isPending,
         signIn: handleSignIn,
-        signUp: handleSignUp,
+        signUp: handleSignUp as AuthContextValue["signUp"],
         signOut: handleSignOut,
       }}
     >

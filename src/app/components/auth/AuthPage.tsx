@@ -1,6 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { FileText, CheckCircle2 } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { useAuth } from "../../../contexts/AuthContext";
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 const FEATURES = [
   "Unlimited quotes saved to the cloud",
@@ -22,21 +25,29 @@ export function AuthPage({ onGuestContinue }: AuthPageProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const turnstileToken = useRef<string | null>(null);
 
   const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (mode === "signup" && TURNSTILE_SITE_KEY && !turnstileToken.current) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === "signin") {
         await signIn(email, password);
       } else {
-        await signUp(name, email, password);
+        await signUp(name, email, password, turnstileToken.current ?? undefined);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+      turnstileToken.current = null;
     } finally {
       setLoading(false);
     }
@@ -142,6 +153,15 @@ export function AuthPage({ onGuestContinue }: AuthPageProps) {
               />
             </div>
 
+            {mode === "signup" && TURNSTILE_SITE_KEY && (
+              <Turnstile
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={(token) => { turnstileToken.current = token; }}
+                onExpire={() => { turnstileToken.current = null; }}
+                options={{ theme: "light", size: "flexible" }}
+              />
+            )}
+
             {error && (
               <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                 {error}
@@ -163,7 +183,7 @@ export function AuthPage({ onGuestContinue }: AuthPageProps) {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); }}
+              onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); turnstileToken.current = null; }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {mode === "signin"
